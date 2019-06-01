@@ -9,8 +9,9 @@
 #region Setup
 
 Write-Debug 'Set up the global scope config variables.'
-if ([Environment]::GetFolderPath('MyDocuments')) {
-    $global:UserModuleBasePath = Join-Path -Path ([Environment]::GetFolderPath('MyDocuments')) -ChildPath 'WindowsPowerShell\Modules'
+$MyDocuments = Join-Path -Path $env:USERPROFILE -ChildPath 'Documents'
+if ($MyDocuments) {
+    $global:UserModuleBasePath = Join-Path -Path $MyDocuments -ChildPath 'WindowsPowerShell\Modules'
 }
 else {
     # Support scenarios where PSGet is running without a MyDocuments special folder (e.g. executing within a DSC resource)
@@ -519,8 +520,8 @@ function Get-PsGetModuleInfo {
             throw "Could not retrieve modules repository from '$DirectoryUrl'. Status code: $StatusCode"
         }
 
-        $nss = @{ a = 'http://www.w3.org/2005/Atom';
-                  pg = 'urn:psget:v1.0' }
+        # $nss = @{ a = 'http://www.w3.org/2005/Atom';
+        #           pg = 'urn:psget:v1.0' }
 
         $feed = $repoXml.feed
         $title = $feed.title.innertext
@@ -689,7 +690,7 @@ function Install-ModuleFromDirectory {
         }
 
         Write-Verbose "Module $Module will be installed from central repository"
-        $moduleData = Get-PsGetModuleInfo -ModuleName:$Module -DirectoryUrl:$DirectoryUrl | select -First 1
+        $moduleData = Get-PsGetModuleInfo -ModuleName:$Module -DirectoryUrl:$DirectoryUrl | Select-Object -First 1
         if (-not $moduleData) {
             throw "Module $Module was not found in central repository"
         }
@@ -1993,8 +1994,8 @@ function Find-LatestNugetPackageFromFeed {
     )
     process {
         # From NuGet.SemanticVersion - https://github.com/Haacked/NuGet/blob/master/src/Core/SemanticVersion.cs
-        $semVerRegex = "^(?<Version>\d+(\s*\.\s*\d+){0,3})(?<Release>-[a-z][0-9a-z-]*)?$"
-        $semVerStrictRegex = "^(?<Version>\d+(\.\d+){2})(?<Release>-[a-z][0-9a-z-]*)?$"
+        #$semVerRegex = "^(?<Version>\d+(\s*\.\s*\d+){0,3})(?<Release>-[a-z][0-9a-z-]*)?$"
+        # $semVerStrictRegex = "^(?<Version>\d+(\.\d+){2})(?<Release>-[a-z][0-9a-z-]*)?$"
 
         # find only stable versions
         $stableRegex = "^(\d+(\s*\.\s*\d+){0,3})?$"
@@ -2013,7 +2014,7 @@ function Find-LatestNugetPackageFromFeed {
             ($_.properties.Version) -match $searchRegex
         }
 
-        return ($packages | Select -Last 1)
+        return ($packages | Select-Object -Last 1)
     }
 }
 
@@ -2130,7 +2131,7 @@ function TabExpansion {
     )
     process {
         if ($line -eq "Install-Module $lastword" -or $line -eq "inmo $lastword" -or $line -eq "ismo $lastword" -or $line -eq "upmo $lastword" -or $line -eq "Update-Module $lastword") {
-            Get-PsGetModuleInfo -ModuleName "$lastword*" | % { $_.Id } | sort -Unique
+            Get-PsGetModuleInfo -ModuleName "$lastword*" | ForEach-Object { $_.Id } | Sort-Object -Unique
         }
         elseif ( Test-Path -Path Function:\$tabExpansionBackup ) {
             & $tabExpansionBackup $line $lastWord

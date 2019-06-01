@@ -24,3 +24,4 @@ Version v*
 .github_changelog_generator
 launcher/.vs
 launcher/src/version.rc2
+.vscode

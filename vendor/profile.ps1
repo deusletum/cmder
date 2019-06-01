@@ -1,20 +1,20 @@
 ﻿# Init Script for PowerShell
 # Created as part of cmder project
 
-# !!! THIS FILE IS OVERWRITTEN WHEN CMDER IS UPDATED
-# !!! Use "%CMDER_ROOT%\config\user_profile.ps1" to add your own startup commands
+# -not -not -not  THIS FILE IS OVERWRITTEN WHEN CMDER IS UPDATED
+# -not -not -not  Use "%CMDER_ROOT%\config\user_profile.ps1" to add your own startup commands
 
 # Compatibility with PS major versions <= 2
-if(!$PSScriptRoot) {
+if (-not $PSScriptRoot) {
     $PSScriptRoot = Split-Path $Script:MyInvocation.MyCommand.Path
 }
 
 if ($ENV:CMDER_USER_CONFIG) {
-    # write-host "CMDER IS ALSO USING INDIVIDUAL USER CONFIG FROM '$ENV:CMDER_USER_CONFIG'!"
+    # write-host "CMDER IS ALSO USING INDIVIDUAL USER CONFIG FROM '$ENV:CMDER_USER_CONFIG'-not "
 }
 
 # We do this for Powershell as Admin Sessions because CMDER_ROOT is not beng set.
-if (! $ENV:CMDER_ROOT ) {
+if (-not  $ENV:CMDER_ROOT ) {
     if ( $ENV:ConEmuDir ) {
         $ENV:CMDER_ROOT = resolve-path( $ENV:ConEmuDir + "\..\.." )
     } else {
@@ -23,7 +23,7 @@ if (! $ENV:CMDER_ROOT ) {
 }
 
 # Remove trailing '\'
-$ENV:CMDER_ROOT = (($ENV:CMDER_ROOT).trimend("\"))
+$ENV:CMDER_ROOT = ($ENV:CMDER_ROOT).trimend("\")
 
 # Do not load bundled psget if a module installer is already available
 # -> recent PowerShell versions include PowerShellGet out of the box
@@ -32,11 +32,11 @@ $moduleInstallerAvailable = [bool](Get-Command -Name 'Install-Module' -ErrorActi
 # Add Cmder modules directory to the autoload path.
 $CmderModulePath = Join-path $PSScriptRoot "psmodules/"
 
-if(-not $moduleInstallerAvailable -and -not $env:PSModulePath.Contains($CmderModulePath) ){
+if (-not $moduleInstallerAvailable -and -not $env:PSModulePath.Contains($CmderModulePath)){
     $env:PSModulePath = $env:PSModulePath.Insert(0, "$CmderModulePath;")
 }
 
-function Configure-Git($GIT_INSTALL_ROOT){
+function Enable-Git($GIT_INSTALL_ROOT){
   $env:Path += $(";" + $GIT_INSTALL_ROOT + "\cmd")
 
   # Add "$GIT_INSTALL_ROOT\usr\bin" to the path if exists and not done already
@@ -44,7 +44,8 @@ function Configure-Git($GIT_INSTALL_ROOT){
   if ((test-path "$GIT_INSTALL_ROOT\usr\bin") -and -not ($env:path -match "$GIT_INSTALL_ROOT_ESC\\usr\\bin")) {
       $env:path = "$env:path;$GIT_INSTALL_ROOT\usr\bin"
   }
-  
+  New-Alias -Name 'Configure-Git' -Value Enable-Git -Force
+
   # Add "$GIT_INSTALL_ROOT\mingw[32|64]\bin" to the path if exists and not done already
   if ((test-path "$GIT_INSTALL_ROOT\mingw32\bin") -and -not ($env:path -match "$GIT_INSTALL_ROOT_ESC\\mingw32\\bin")) {
       $env:path = "$env:path;$GIT_INSTALL_ROOT\mingw32\bin"
@@ -54,20 +55,20 @@ function Configure-Git($GIT_INSTALL_ROOT){
 }
 
 $gitLoaded = $false
-function Import-Git($Loaded){
-    if($Loaded) { return }
+function Import-Git ($Loaded){
+    if ($Loaded) { return }
     $GitModule = Get-Module -Name Posh-Git -ListAvailable
-    if($GitModule | select version | where version -le ([version]"0.6.1.20160330")){
-        Import-Module Posh-Git > $null
+    if ($GitModule | Select-Object version | Where-Object version -le ([version]"0.6.1.20160330")){
+        Import-Module Posh-Git | Out-Null
     }
-    if(-not ($GitModule) ) {
+    if (-not ($GitModule) ) {
         Write-Warning "Missing git support, install posh-git with 'Install-Module posh-git' and restart cmder."
     }
     # Make sure we only run once by alawys returning true
     return $true
 }
 
-function checkGit($Path) {
+function Assert-Git ($Path) {
     if (Test-Path -Path (Join-Path $Path '.git') ) {
         $gitLoaded = Import-Git $gitLoaded
         Write-VcsStatus
@@ -75,13 +76,14 @@ function checkGit($Path) {
     }
     $SplitPath = split-path $path
     if ($SplitPath) {
-        checkGit($SplitPath)
+        Assert-Git ($SplitPath)
     }
 }
+New-Alias -Name 'CheckGit' -Value Assert-Git -Force
 
 try {
     # Check if git is on PATH, i.e. Git already installed on system
-    Get-command -Name "git" -ErrorAction Stop >$null
+    Get-command -Name "git" -ErrorAction Stop | Out-Null
 } catch {
     if (test-path "$env:CMDER_ROOT\vendor\git-for-windows") {
         Configure-Git "$env:CMDER_ROOT\vendor\git-for-windows"
@@ -105,7 +107,7 @@ if (-not (test-path "$ENV:CMDER_ROOT\config\profile.d")) {
   mkdir "$ENV:CMDER_ROOT\config\profile.d"
 }
 
-pushd $ENV:CMDER_ROOT\config\profile.d
+Push-Location $ENV:CMDER_ROOT\config\profile.d
 foreach ($x in Get-ChildItem *.psm1) {
   # write-host write-host Sourcing $x
   Import-Module $x
@@ -115,12 +117,12 @@ foreach ($x in Get-ChildItem *.ps1) {
   # write-host write-host Sourcing $x
   . $x
 }
-popd
+Pop-Location
 
 # Drop *.ps1 files into "$ENV:CMDER_USER_CONFIG\config\profile.d"
 # to source them at startup.  Requires using cmder.exe /C [cmder_user_root_path] argument
-if ($ENV:CMDER_USER_CONFIG -ne "" -and (test-path "$ENV:CMDER_USER_CONFIG\profile.d")) {
-    pushd $ENV:CMDER_USER_CONFIG\profile.d
+if ($ENV:CMDER_USER_CONFIG -ne "" -and (Test-Path "$ENV:CMDER_USER_CONFIG\profile.d")) {
+    Push-Location $ENV:CMDER_USER_CONFIG\profile.d
     foreach ($x in Get-ChildItem *.psm1) {
       # write-host write-host Sourcing $x
       Import-Module $x
@@ -130,7 +132,7 @@ if ($ENV:CMDER_USER_CONFIG -ne "" -and (test-path "$ENV:CMDER_USER_CONFIG\profil
       # write-host write-host Sourcing $x
       . $x
     }
-    popd
+    Pop-Location
 }
 
 # Renaming to "config\user_profile.ps1" to "user_profile.ps1" for consistency.
@@ -158,7 +160,7 @@ if ($ENV:CMDER_USER_CONFIG) {
     }
 }
 
-if (! (Test-Path $CmderUserProfilePath) ) {
+if (-not  (Test-Path $CmderUserProfilePath) ) {
     Write-Host -BackgroundColor Darkgreen -ForegroundColor White "First Run: Creating user startup file: $CmderUserProfilePath"
     Copy-Item "$env:CMDER_ROOT\vendor\user_profile.ps1.default" -Destination $CmderUserProfilePath
 }
@@ -211,6 +213,6 @@ if ( $(get-command prompt).Definition -match 'PS \$\(\$executionContext.SessionS
 
   # Functions can be made constant only at creation time
   # ReadOnly at least requires `-force` to be overwritten
-  # if (!$(get-command Prompt).Options -match 'ReadOnly') {Set-Item -Path function:\prompt  -Value $Prompt  -Options ReadOnly}
+  # if (-not $(get-command Prompt).Options -match 'ReadOnly') {Set-Item -Path function:\prompt  -Value $Prompt  -Options ReadOnly}
   Set-Item -Path function:\prompt  -Value $Prompt  -Options ReadOnly
 }
