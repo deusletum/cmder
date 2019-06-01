@@ -93,7 +93,7 @@ try {
 if ( Get-command -Name "vim" -ErrorAction silentlycontinue) {
     new-alias -name "vi" -value vim
 }
-
+$foo = 'foo'
 if (Get-Module PSReadline -ErrorAction "SilentlyContinue") {
     Set-PSReadlineOption -ExtraPromptLineCount 1
 }
